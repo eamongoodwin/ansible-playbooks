@@ -1,0 +1,24 @@
+---
+- name: Test Ansible connection and basic tasks
+  hosts: all
+  become: true
+  tasks:
+    - name: Ensure test directory exists
+      file:
+        path: /tmp/ansible-test
+        state: directory
+        mode: "0755"
+
+    - name: Create a test file
+      copy:
+        content: "This is a test file created by Ansible.\n"
+        dest: /tmp/ansible-test/test-file.txt
+        mode: "0644"
+
+    - name: Display the test file content
+      command: cat /tmp/ansible-test/test-file.txt
+      register: test_file_content
+
+    - name: Show output of the test file
+      debug:
+        msg: "{{ test_file_content.stdout }}"
