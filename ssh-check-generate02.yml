@@ -38,6 +38,13 @@
         flat: yes
         validate_checksum: yes
 
+    - name: Set ownership for private key on control node
+      file:
+        path: "/home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}_id_rsa"
+        owner: wsl-admin
+        group: wsl-admin
+        mode: "0600"
+
     - name: Fetch public key from target to Ansible control node
       fetch:
         src: /root/.ssh/id_rsa.pub
@@ -45,9 +52,15 @@
         flat: yes
         validate_checksum: yes
 
+    - name: Set ownership for public key on control node
+      file:
+        path: "/home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}_id_rsa.pub"
+        owner: wsl-admin
+        group: wsl-admin
+        mode: "0644"
+
 - name: Set correct permissions on the central repository
   hosts: localhost
-  become: true
   tasks:
 
     - name: Ensure central repository directory exists
@@ -75,4 +88,3 @@
         group: wsl-admin
         mode: "0644"
       loop: "{{ query('ansible.builtin.fileglob', '/home/wsl-admin/central-ssh-repo/*_id_rsa.pub') }}"
-
