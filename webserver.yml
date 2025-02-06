@@ -1,0 +1,58 @@
+- name: Set up Nginx web server with HTTPS
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      become: yes
+
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Copy custom index.html
+      copy:
+        src: ./index.html
+        dest: /var/www/html/index.html
+
+    - name: Allow HTTP and HTTPS traffic through UFW
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      with_items:
+        - 80
+        - 443
+
+    - name: Create a directory for SSL certificates
+      file:
+        path: /etc/nginx/ssl
+        state: directory
+        mode: '0755'
+
+    - name: Generate a self-signed SSL certificate
+      command: >
+        openssl req -x509 -nodes -days 365
+        -newkey rsa:2048
+        -keyout /etc/nginx/ssl/nginx.key
+        -out /etc/nginx/ssl/nginx.crt
+        -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=192.168.42.128"
+
+    - name: Configure Nginx for HTTPS
+      template:
+        src: nginx_https.j2
+        dest: /etc/nginx/sites-available/default
+      notify:
+        - Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+

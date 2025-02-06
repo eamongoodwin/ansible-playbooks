@@ -1,0 +1,36 @@
+- name: System Health Check
+  hosts: ubuntu
+  become: yes
+  tasks:
+    - name: Create a directory for health check logs
+      file:
+        path: /var/log/system-health
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Create a system health check script
+      copy:
+        dest: /usr/local/bin/system_health.sh
+        content: |
+          #!/bin/bash
+          echo "System Health Report - $(date)" > /var/log/system-health/report.txt
+          echo "------------------------------------" >> /var/log/system-health/report.txt
+          echo "CPU Usage:" >> /var/log/system-health/report.txt
+          top -bn1 | grep "Cpu(s)" >> /var/log/system-health/report.txt
+          echo "" >> /var/log/system-health/report.txt
+          echo "Memory Usage:" >> /var/log/system-health/report.txt
+          free -h >> /var/log/system-health/report.txt
+          echo "" >> /var/log/system-health/report.txt
+          echo "Disk Usage:" >> /var/log/system-health/report.txt
+          df -h >> /var/log/system-health/report.txt
+        mode: '0755'
+      become: yes
+
+    - name: Schedule a cron job to run the script daily
+      cron:
+        name: "System Health Check"
+        job: "/usr/local/bin/system_health.sh"
+        minute: "0"
+        hour: "0"
+

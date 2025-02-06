@@ -1,0 +1,78 @@
+---
+- name: Ensure SSH keys exist and fetch them to the central repository on Ansible server
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Check if SSH private key exists
+      stat:
+        path: /root/.ssh/id_rsa
+      register: ssh_key
+
+    - name: Generate SSH key if missing
+      command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
+      when: not ssh_key.stat.exists
+
+    - name: Ensure .ssh directory has correct permissions
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: "0700"
+
+    - name: Ensure private key has correct permissions
+      file:
+        path: /root/.ssh/id_rsa
+        state: file
+        mode: "0600"
+
+    - name: Ensure public key has correct permissions
+      file:
+        path: /root/.ssh/id_rsa.pub
+        state: file
+        mode: "0644"
+
+    - name: Fetch private key from target to Ansible control node
+      fetch:
+        src: /root/.ssh/id_rsa
+        dest: /home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}_id_rsa
+        flat: yes
+        validate_checksum: yes
+
+    - name: Fetch public key from target to Ansible control node
+      fetch:
+        src: /root/.ssh/id_rsa.pub
+        dest: /home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}_id_rsa.pub
+        flat: yes
+        validate_checksum: yes
+
+- name: Set correct permissions on the central repository
+  hosts: localhost
+  become: true
+  tasks:
+
+    - name: Ensure central repository directory exists
+      file:
+        path: /home/wsl-admin/central-ssh-repo
+        state: directory
+        owner: wsl-admin
+        group: wsl-admin
+        mode: "0700"
+
+    - name: Ensure correct permissions for stored private keys
+      file:
+        path: "/home/wsl-admin/central-ssh-repo/{{ item }}"
+        state: file
+        owner: wsl-admin
+        group: wsl-admin
+        mode: "0600"
+      loop: "{{ query('ansible.builtin.fileglob', '/home/wsl-admin/central-ssh-repo/*_id_rsa') }}"
+
+    - name: Ensure correct permissions for stored public keys
+      file:
+        path: "/home/wsl-admin/central-ssh-repo/{{ item }}"
+        state: file
+        owner: wsl-admin
+        group: wsl-admin
+        mode: "0644"
+      loop: "{{ query('ansible.builtin.fileglob', '/home/wsl-admin/central-ssh-repo/*_id_rsa.pub') }}"
+

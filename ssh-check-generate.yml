@@ -1,0 +1,28 @@
+---
+- name: Check and copy SSH key on Linux servers
+  hosts: ubuntu
+  become: yes
+  tasks:
+
+    - name: Ensure SSH key exists or generate it on the target server
+      ansible.builtin.shell: |
+        if [[ ! -f ~/.ssh/id_rsa ]]; then
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N "" -C "ansible-generated-key"
+        fi
+      args:
+        executable: /bin/bash
+
+    - name: Fetch the private key from the target server
+      ansible.builtin.fetch:
+        src: "~/.ssh/id_rsa"
+        dest: "/home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}-id_rsa"
+        flat: yes
+        validate_checksum: no
+
+    - name: Fetch the public key from the target server
+      ansible.builtin.fetch:
+        src: "~/.ssh/id_rsa.pub"
+        dest: "/home/wsl-admin/central-ssh-repo/{{ inventory_hostname }}-id_rsa.pub"
+        flat: yes
+        validate_checksum: no
+
